@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="TestmailPeek — 简洁优雅的 Testmail 邮件预览工具" />
+  <meta name="author" content="JettHayes" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5' fill='%23059669'/><text x='50' y='62' font-size='36' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'>P</text></svg>" type="image/svg+xml">
+  <title>TestmailPeek</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+  <link rel="stylesheet" href="app.css" />
+
+  <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
+  <script src="https://unpkg.com/element-plus"></script>
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+</head>
+
+<body>
+  <div id="app" class="pk-shell" v-cloak>
+
+    <!-- ═══ TOP COMMAND BAR ═══ -->
+    <header class="pk-topbar">
+      <div class="pk-topbar-left">
+        <span class="pk-logo">⬡ TestmailPeek</span>
+      </div>
+      <div class="pk-topbar-center">
+        <el-input v-model="namespace" placeholder="命名空间" class="pk-field pk-field--ns" clearable>
+          <template #prefix><el-icon><Coin /></el-icon></template>
+        </el-input>
+        <el-input v-model="apikey" type="password" placeholder="API 密钥" class="pk-field pk-field--key" show-password clearable>
+          <template #prefix><el-icon><Lock /></el-icon></template>
+        </el-input>
+        <el-button type="primary" class="pk-fetch-btn" @click="loadData(0)" :loading="loading">
+          <el-icon v-if="!loading"><Promotion /></el-icon>
+          获取邮件
+        </el-button>
+      </div>
+      <div class="pk-topbar-right">
+        <a href="https://github.com/JettHayes/TestmailPeek" target="_blank" class="pk-gh-link">
+          GitHub ↗
+        </a>
+      </div>
+    </header>
+
+    <!-- ═══ MAIN WORKSPACE ═══ -->
+    <div class="pk-workspace">
+
+      <!-- ─── INBOX PANEL ─── -->
+      <aside class="pk-inbox" :class="{ 'is-collapsed': showContent && mobileMode }">
+        <div class="pk-inbox-title">
+          <span>收件箱</span>
+          <el-badge :value="items.length" :hidden="!items.length" type="primary" />
+        </div>
+
+        <el-scrollbar class="pk-inbox-scroll">
+          <transition-group name="slide-up" tag="div" class="pk-mail-list">
+            <div
+              v-for="(item, idx) in items"
+              :key="item.id"
+              class="pk-mail-card"
+              :class="{ 'is-selected': item === current }"
+              :style="{ '--idx': idx }"
+              @click="selectItem(item)">
+              <div class="pk-mail-indicator"></div>
+              <div class="pk-mail-body">
+                <div class="pk-mail-subject">{{ item.subject || '（无主题）' }}</div>
+                <div class="pk-mail-from">{{ item.from }}</div>
+              </div>
+            </div>
+          </transition-group>
+
+          <div v-if="offset && items.length > 0" class="pk-more-wrap">
+            <el-button size="small" plain @click="loadData(offset)" class="pk-more-btn">加载更多</el-button>
+          </div>
+          <div v-if="!items.length && !loading" class="pk-inbox-empty">
+            <el-icon :size="32" color="#C4B5A0"><Notification /></el-icon>
+            <p>暂无邮件</p>
+          </div>
+        </el-scrollbar>
+      </aside>
+
+      <!-- ─── READER PANEL ─── -->
+      <section class="pk-reader" :class="{ 'is-open': showContent || !mobileMode }">
+
+        <!-- Mobile back -->
+        <div v-if="mobileMode && showContent" class="pk-reader-back" @click="goBack">
+          <el-icon><ArrowLeft /></el-icon> 返回
+        </div>
+
+        <template v-if="current">
+          <!-- Reader Header -->
+          <div class="pk-reader-head">
+            <h1 class="pk-subject">{{ current.subject }}</h1>
+            <div class="pk-meta-strip">
+              <div class="pk-meta-chip">
+                <span class="pk-chip-key">发件人</span>
+                <span class="pk-chip-val">{{ current.from }}</span>
+              </div>
+              <div class="pk-meta-chip">
+                <span class="pk-chip-key">收件人</span>
+                <span class="pk-chip-val">{{ current.to }}</span>
+              </div>
+              <div class="pk-meta-chip">
+                <span class="pk-chip-key">时间</span>
+                <span class="pk-chip-val">{{ new Date(current.date).toLocaleString() }}</span>
+              </div>
+            </div>
+
+            <!-- Attachments -->
+            <div v-if="current.attachments?.length" class="pk-attachments">
+              <a v-for="att in current.attachments" :key="att.cid" :href="att.downloadUrl" target="_blank" class="pk-att-pill">
+                <el-icon><Paperclip /></el-icon>
+                {{ att.filename }}
+                <span class="pk-att-size">{{ fileSizeToString(att.size) }}</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Reader Body -->
+          <div class="pk-reader-body">
+            <div v-if="showAlert && !showHTML && current.html" class="pk-html-banner">
+              <span>该邮件包含 HTML 内容</span>
+              <el-button size="small" type="primary" plain @click="showHTML = true">渲染 HTML</el-button>
+              <el-button size="small" text @click="showAlert = false">
+                <el-icon><Close /></el-icon>
+              </el-button>
+            </div>
+
+            <div class="pk-render-frame">
+              <iframe v-if="showHTML" :src="encodedHTML" class="pk-iframe"></iframe>
+              <pre v-else class="pk-plaintext">{{ current.text }}</pre>
+            </div>
+          </div>
+        </template>
+
+        <!-- Empty State -->
+        <div v-else class="pk-reader-empty">
+          <div class="pk-empty-hex">⬡</div>
+          <p>选择一封邮件以预览</p>
+        </div>
+
+      </section>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
