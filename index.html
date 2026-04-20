@@ -40,6 +40,12 @@
           <el-icon v-if="!loading"><Promotion /></el-icon>
           获取邮件
         </el-button>
+        <el-tooltip content="清空所有设置和数据" placement="bottom">
+          <el-button class="pk-clear-btn" @click="resetState" :disabled="loading">
+            <el-icon><Delete /></el-icon>
+            <span>清空</span>
+          </el-button>
+        </el-tooltip>
       </div>
       <div class="pk-topbar-right">
         <a href="https://github.com/JettHayes/TestmailPeek" target="_blank" class="pk-gh-link">

@@ -93,6 +93,33 @@ body {
   letter-spacing: 0.02em;
 }
 
+.pk-clear-btn {
+  height: 38px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--pk-border);
+  color: var(--pk-text-muted);
+  font-family: var(--pk-font-display);
+  font-weight: 500;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  background: var(--pk-surface);
+}
+
+.pk-clear-btn:hover {
+  background: #FEF2F2;
+  border-color: #FCA5A5;
+  color: #DC2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.08);
+}
+
+.pk-clear-btn:active {
+  transform: translateY(0);
+}
+
 .pk-topbar-right { flex-shrink: 0; }
 
 .pk-gh-link {

@@ -129,6 +129,23 @@ const app = createApp({
                 });
         };
 
+        const resetState = () => {
+            namespace.value = "";
+            apikey.value = "";
+            items.value = [];
+            current.value = null;
+            offset.value = 0;
+            showContent.value = false;
+            localStorage.removeItem("namespace");
+            localStorage.removeItem("apikey");
+
+            // 清除 URL 中的参数，防止刷新后再次自动加载
+            const newUrl = new URL(window.location.origin + window.location.pathname);
+            window.history.replaceState({}, "", newUrl.toString());
+
+            ElementPlus.ElMessage.success("状态已清空");
+        };
+
         const fileSizeToString = (size) => {
             if (size < 1000) return `${size} B`;
             if (size < 1e6) return `${(size / 1e3).toFixed(1)} KB`;
@@ -141,10 +158,23 @@ const app = createApp({
         }
 
         return {
-            namespace, apikey, items, offset, current,
-            showAlert, showHTML, showContent, encodedHTML,
-            loading, mobileMode,
-            loadData, selectItem, goBack, fileSizeToString, isMobile
+            namespace,
+            apikey,
+            items,
+            offset,
+            current,
+            showAlert,
+            showHTML,
+            showContent,
+            encodedHTML,
+            loading,
+            mobileMode,
+            loadData,
+            selectItem,
+            goBack,
+            resetState,
+            fileSizeToString,
+            isMobile,
         };
     },
 });
